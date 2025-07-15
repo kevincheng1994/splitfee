@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分帳紀錄</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-3">
+  <h3>分帳紀錄</h3>
+  <form id="form">
+    <input class="form-control mb-2" name="name" placeholder="姓名" required>
+    <input class="form-control mb-2" name="amount" type="number" placeholder="金額" required>
+    <button class="btn btn-primary">送出</button>
+  </form>
+
+  <hr>
+  <div id="records"></div>
+
+  <script>
+    const SHEET_API = 'https://script.google.com/macros/s/AKfycbzqkqkwCxy9eUNPGAXjahe3yfXX-l-GtoUo4KVXHnatoM3phP36esLWsfB1AuY3UDUG/exec';
+
+    async function loadData() {
+      const res = await fetch(SHEET_API);
+      const data = await res.json();
+      const container = document.getElementById('records');
+      container.innerHTML = '';
+      data.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'border p-2 my-1';
+        row.innerHTML = `
+          <strong>${r.name}</strong>：${r.amount} 元
+          <button class="btn btn-sm btn-danger float-end" onclick="deleteRecord('${r.id}')">刪除</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const data = {
+        name: e.target.name.value,
+        amount: e.target.amount.value
+      };
+      await fetch(SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      e.target.reset();
+      loadData();
+    };
+
+    async function deleteRecord(id) {
+      await fetch(`${SHEET_API}?id=${id}`, { method: 'DELETE' });
+      loadData();
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
