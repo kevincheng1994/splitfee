@@ -57,5 +57,70 @@
 
     loadData();
   </script>
+
+  <!-- 新增：計算分帳按鈕 -->
+  <div class="container mt-4">
+    <button class="btn btn-success w-100" onclick="calculateSplit()">📊 計算分帳</button>
+    <div id="settlementResult" class="mt-3"></div>
+  </div>
+  
+  <script>
+    function calculateSplit() {
+      fetch(SHEET_API)
+        .then(response => response.json())
+        .then(data => {
+          if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById('settlementResult').innerText = '無資料可計算';
+            return;
+          }
+  
+          const nameToAmount = {};
+          let total = 0;
+  
+          data.forEach(entry => {
+            const name = entry.name.trim();
+            const amount = parseFloat(entry.amount);
+            if (!nameToAmount[name]) nameToAmount[name] = 0;
+            nameToAmount[name] += amount;
+            total += amount;
+          });
+  
+          const names = Object.keys(nameToAmount);
+          const average = total / names.length;
+  
+          // 計算每人差額
+          const balances = names.map(name => ({
+            name,
+            paid: nameToAmount[name],
+            diff: +(nameToAmount[name] - average).toFixed(2)
+          }));
+  
+          // 分兩邊：要給錢 / 收錢
+          const payers = balances.filter(p => p.diff < 0).map(p => ({ ...p }));
+          const receivers = balances.filter(p => p.diff > 0).map(p => ({ ...p }));
+  
+          const settlements = [];
+  
+          for (let payer of payers) {
+            while (payer.diff < 0 && receivers.length > 0) {
+              const receiver = receivers[0];
+              const amount = Math.min(-payer.diff, receiver.diff);
+              settlements.push(`${payer.name} 給 ${receiver.name} ${amount.toFixed(2)} 元`);
+              payer.diff += amount;
+              receiver.diff -= amount;
+              if (receiver.diff === 0) receivers.shift();
+            }
+          }
+  
+          document.getElementById('settlementResult').innerHTML = `
+            <div class="alert alert-info">
+              <strong>平均每人需出：</strong> ${average.toFixed(2)} 元
+              <hr>
+              ${settlements.length > 0 ? settlements.map(s => `<div>${s}</div>`).join('') : '所有人花費相等，無需分帳'}
+            </div>`;
+        });
+    }
+  </script>
+  
 </body>
 </html>
