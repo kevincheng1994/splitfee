@@ -51,7 +51,7 @@
     };
 
     async function deleteRecord(id) {
-      await fetch(`${SHEET_API}?id=${id}`, { method: 'DELETE' });
+      await fetch(`${SHEET_API}?action=delete&id=${id}`);
       loadData();
     }
 
